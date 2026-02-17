@@ -1,7 +1,7 @@
 /**
  * Storage-moduuli - LocalStorage-käsittely
  */
-export const Storage = {
+const Storage = {
     KEY: 'onnenpyora_data',
 
     /**

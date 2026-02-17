@@ -1,9 +1,6 @@
 /**
  * Onnenpyörä - Pääsovellus
  */
-import { Storage } from './storage.js';
-import { FortuneWheel } from './wheel.js';
-
 document.addEventListener('DOMContentLoaded', () => {
     // Elementit
     const canvas = document.getElementById('wheel');
