@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'">
     <title>Onnenpyörä</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -13,55 +14,56 @@
         <div class="wheel-section">
             <div class="wheel-container">
                 <div class="pointer"></div>
-                <canvas id="wheel" width="400" height="400"></canvas>
+                <canvas id="wheel" width="400" height="400" role="img" aria-label="Onnenpyörä - pyöritä painamalla pyöritä-nappia"></canvas>
             </div>
 
-            <button id="spin-btn" class="spin-button">Pyöritä!</button>
+            <div class="action-buttons">
+                <button id="spin-btn" class="spin-button" aria-label="Pyöritä onnenpyörää">Pyöritä!</button>
+                <button id="share-btn" class="share-button" aria-label="Kopioi jakamislinkki">Jaa linkki</button>
+            </div>
 
-            <div id="result" class="result"></div>
+            <div id="result" class="result" role="status" aria-live="polite" aria-atomic="true"></div>
+
+            <div class="history-section" id="history-section" style="display: none;">
+                <div class="history-header">
+                    <h3>Historia</h3>
+                    <button id="clear-history" class="clear-history-btn" aria-label="Tyhjennä historia">Tyhjennä</button>
+                </div>
+                <ul id="history-list" class="history-list"></ul>
+            </div>
         </div>
 
         <div class="controls">
-            <h2>Vaihtoehdot</h2>
-            <div class="inputs">
-                <div class="input-group">
-                    <label for="sector-1">1.</label>
-                    <input type="text" id="sector-1" maxlength="20" placeholder="Vaihtoehto 1">
+            <div class="controls-header">
+                <h2>Vaihtoehdot</h2>
+                <div class="sector-controls">
+                    <button id="remove-sector" class="sector-btn" aria-label="Poista vaihtoehto" title="Poista">−</button>
+                    <span id="sector-count" class="sector-count">8</span>
+                    <button id="add-sector" class="sector-btn" aria-label="Lisää vaihtoehto" title="Lisää">+</button>
                 </div>
-                <div class="input-group">
-                    <label for="sector-2">2.</label>
-                    <input type="text" id="sector-2" maxlength="20" placeholder="Vaihtoehto 2">
+            </div>
+            <div class="inputs" id="inputs-container"></div>
+
+            <div class="controls-footer">
+                <div class="theme-selector">
+                    <label for="theme-select">Teema:</label>
+                    <select id="theme-select">
+                    <option value="default">Klassinen</option>
+                    <option value="pastel">Pastelli</option>
+                    <option value="neon">Neon</option>
+                    <option value="ocean">Meri</option>
+                </select>
                 </div>
-                <div class="input-group">
-                    <label for="sector-3">3.</label>
-                    <input type="text" id="sector-3" maxlength="20" placeholder="Vaihtoehto 3">
-                </div>
-                <div class="input-group">
-                    <label for="sector-4">4.</label>
-                    <input type="text" id="sector-4" maxlength="20" placeholder="Vaihtoehto 4">
-                </div>
-                <div class="input-group">
-                    <label for="sector-5">5.</label>
-                    <input type="text" id="sector-5" maxlength="20" placeholder="Vaihtoehto 5">
-                </div>
-                <div class="input-group">
-                    <label for="sector-6">6.</label>
-                    <input type="text" id="sector-6" maxlength="20" placeholder="Vaihtoehto 6">
-                </div>
-                <div class="input-group">
-                    <label for="sector-7">7.</label>
-                    <input type="text" id="sector-7" maxlength="20" placeholder="Vaihtoehto 7">
-                </div>
-                <div class="input-group">
-                    <label for="sector-8">8.</label>
-                    <input type="text" id="sector-8" maxlength="20" placeholder="Vaihtoehto 8">
-                </div>
+                <label class="sound-toggle">
+                    <input type="checkbox" id="sound-toggle" checked>
+                    <span>Äänet</span>
+                </label>
             </div>
         </div>
     </main>
 
-    <script src="js/storage.js"></script>
-    <script src="js/wheel.js"></script>
-    <script src="js/app.js"></script>
+    <div id="confetti-container" class="confetti-container" aria-hidden="true"></div>
+
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>

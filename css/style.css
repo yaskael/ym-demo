@@ -112,6 +112,52 @@ h2 {
     transform: none;
 }
 
+/* Näppäimistöfokuksen tyylit */
+.spin-button:focus-visible {
+    outline: 3px solid #ffd700;
+    outline-offset: 3px;
+}
+
+.input-group input:focus-visible {
+    outline: 2px solid #ffd700;
+    outline-offset: 1px;
+}
+
+/* Toimintopainikkeet */
+.action-buttons {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.share-button {
+    background: rgba(255, 255, 255, 0.1);
+    color: #a0a0a0;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    padding: 12px 20px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.share-button:hover {
+    color: #fff;
+    border-color: #00cec9;
+    background: rgba(0, 206, 201, 0.15);
+}
+
+.share-button.copied {
+    color: #00b894;
+    border-color: #00b894;
+}
+
+.share-button:focus-visible {
+    outline: 3px solid #ffd700;
+    outline-offset: 3px;
+}
+
 /* Tulosnäyttö */
 .result {
     min-height: 60px;
@@ -139,6 +185,62 @@ h2 {
     padding: 25px;
     border-radius: 15px;
     backdrop-filter: blur(10px);
+}
+
+.controls-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.controls-header h2 {
+    margin-bottom: 0;
+}
+
+.sector-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sector-count {
+    font-size: 1.1rem;
+    font-weight: bold;
+    min-width: 24px;
+    text-align: center;
+}
+
+.sector-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.sector-btn:hover:not(:disabled) {
+    background: rgba(0, 206, 201, 0.3);
+    border-color: #00cec9;
+}
+
+.sector-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.sector-btn:focus-visible {
+    outline: 2px solid #ffd700;
+    outline-offset: 2px;
 }
 
 .inputs {
@@ -178,6 +280,148 @@ h2 {
 
 .input-group input::placeholder {
     color: rgba(255, 255, 255, 0.3);
+}
+
+/* Teemavalitsin */
+.theme-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.theme-selector label {
+    color: #a0a0a0;
+    font-size: 0.9rem;
+}
+
+.theme-selector select {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.theme-selector select:focus {
+    outline: none;
+    border-color: #00cec9;
+}
+
+.theme-selector select option {
+    background: #1a1a2e;
+    color: #fff;
+}
+
+/* Historia */
+.history-section {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.history-header h3 {
+    font-size: 1rem;
+    color: #a0a0a0;
+}
+
+.clear-history-btn {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #a0a0a0;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.clear-history-btn:hover {
+    color: #ff6b6b;
+    border-color: #ff6b6b;
+}
+
+.history-list {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.history-list li {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: #ddd;
+}
+
+/* Äänitoggle */
+.controls-footer {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-top: 18px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sound-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #a0a0a0;
+    font-size: 0.9rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.sound-toggle input[type="checkbox"] {
+    accent-color: #00cec9;
+    width: 16px;
+    height: 16px;
+}
+
+/* Konfetti */
+.confetti-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.confetti-piece {
+    position: absolute;
+    top: -10px;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    animation: confetti-fall 2s ease-out forwards;
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
 }
 
 /* Responsiivisuus */
