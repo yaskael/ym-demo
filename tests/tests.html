@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <title>Onnenpyörä - Testit</title>
+    <style>
+        body { font-family: monospace; background: #1a1a2e; color: #fff; padding: 20px; }
+        .pass { color: #00b894; }
+        .fail { color: #ff6b6b; }
+        .section { margin: 15px 0; font-weight: bold; font-size: 1.1em; color: #00cec9; }
+        #results { white-space: pre-wrap; line-height: 1.6; }
+        .summary { margin-top: 20px; padding: 10px; border-top: 2px solid #333; font-size: 1.1em; }
+    </style>
+</head>
+<body>
+    <h1>Onnenpyörä - Yksikkötestit</h1>
+    <canvas id="test-canvas" width="400" height="400" style="display:none;"></canvas>
+    <div id="results"></div>
+
+    <script type="module">
+        import { Storage } from '../js/storage.js';
+        import { FortuneWheel } from '../js/wheel.js';
+        const results = document.getElementById('results');
+        let passed = 0;
+        let failed = 0;
+
+        function section(name) {
+            results.innerHTML += `\n<span class="section">--- ${name} ---</span>\n`;
+        }
+
+        function assert(description, condition) {
+            if (condition) {
+                passed++;
+                results.innerHTML += `<span class="pass">  PASS</span> ${description}\n`;
+            } else {
+                failed++;
+                results.innerHTML += `<span class="fail">  FAIL</span> ${description}\n`;
+            }
+        }
+
+        function assertEqual(description, actual, expected) {
+            const pass = actual === expected;
+            if (pass) {
+                passed++;
+                results.innerHTML += `<span class="pass">  PASS</span> ${description}\n`;
+            } else {
+                failed++;
+                results.innerHTML += `<span class="fail">  FAIL</span> ${description} (odotettiin: ${expected}, saatiin: ${actual})\n`;
+            }
+        }
+
+        // ===== FortuneWheel testit =====
+
+        section('FortuneWheel - Alustus');
+        const canvas = document.getElementById('test-canvas');
+        const wheel = new FortuneWheel(canvas);
+
+        assertEqual('Oletussektorien lukumäärä on 8', wheel.sectors.length, 8);
+        assertEqual('Ensimmäinen oletusteksti', wheel.sectors[0], 'Vaihtoehto 1');
+        assert('Pyörä ei pyöri alussa', !wheel.spinning());
+        assertEqual('Täytettyjä sektoreita alussa 0', wheel.filledCount(), 0);
+        assertEqual('MIN_SECTORS on 2', wheel.MIN_SECTORS, 2);
+        assertEqual('MAX_SECTORS on 12', wheel.MAX_SECTORS, 12);
+
+        section('FortuneWheel - Sektorien päivitys');
+        wheel.updateSector(0, 'Testi');
+        assertEqual('Sektorin teksti päivitetty', wheel.sectors[0], 'Testi');
+        assertEqual('Täytettyjen sektorien lkm on 1', wheel.filledCount(), 1);
+
+        wheel.updateSector(0, '');
+        assertEqual('Tyhjä teksti palauttaa oletuksen', wheel.sectors[0], 'Vaihtoehto 1');
+        assertEqual('Tyhjä teksti nollaa filled-tilan', wheel.filledCount(), 0);
+
+        wheel.updateSector(-1, 'Invalid');
+        assertEqual('Negatiivinen indeksi ei muuta mitään', wheel.sectors[0], 'Vaihtoehto 1');
+
+        wheel.updateSector(100, 'Invalid');
+        assertEqual('Liian suuri indeksi ei muuta mitään', wheel.sectors.length, 8);
+
+        section('FortuneWheel - Dynaaminen sektorimäärä');
+        wheel.setSectorCount(4);
+        assertEqual('Sektorimäärä asetettu 4:ään', wheel.sectors.length, 4);
+
+        wheel.setSectorCount(10);
+        assertEqual('Sektorimäärä kasvatettu 10:een', wheel.sectors.length, 10);
+
+        const clamped1 = wheel.setSectorCount(1);
+        assertEqual('Alle minimin rajoitetaan minimiin', wheel.sectors.length, 2);
+        assertEqual('Palautusarvo on rajoitettu', clamped1, 2);
+
+        const clamped2 = wheel.setSectorCount(20);
+        assertEqual('Yli maksimin rajoitetaan maksimiin', wheel.sectors.length, 12);
+        assertEqual('Palautusarvo on rajoitettu', clamped2, 12);
+
+        wheel.setSectorCount(8); // Palauta oletukseen
+
+        section('FortuneWheel - Sektorien massapäivitys');
+        wheel.updateAllSectors(['A', 'B', '', 'D', '', '', '', '']);
+        assertEqual('Ensimmäinen sektori päivitetty', wheel.sectors[0], 'A');
+        assertEqual('Toinen sektori päivitetty', wheel.sectors[1], 'B');
+        assertEqual('Tyhjä sektori saa oletustekstin', wheel.sectors[2], 'Vaihtoehto 3');
+        assertEqual('Täytettyjä sektoreita 3', wheel.filledCount(), 3);
+
+        section('FortuneWheel - Voittajan laskenta');
+        wheel.setSectorCount(4);
+        wheel.rotation = 0;
+        const winner0 = wheel.getWinner();
+        assert('Voittajan indeksi on kelvollinen (0-3)', winner0.index >= 0 && winner0.index < 4);
+        assert('Voittajan teksti ei ole tyhjä', winner0.text.length > 0);
+
+        // Testi eri kulmilla
+        wheel.setSectorCount(8);
+        wheel.updateAllSectors(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
+        wheel.rotation = 0;
+        const w1 = wheel.getWinner();
+        assert('Kulma 0: voittajan indeksi 0-7', w1.index >= 0 && w1.index < 8);
+
+        section('FortuneWheel - Teemat');
+        assert('Default-teema on olemassa', !!wheel.themes.default);
+        assert('Pastel-teema on olemassa', !!wheel.themes.pastel);
+        assert('Neon-teema on olemassa', !!wheel.themes.neon);
+        assert('Ocean-teema on olemassa', !!wheel.themes.ocean);
+        assertEqual('Jokaisessa teemassa on 12 väriä', wheel.themes.default.length, 12);
+
+        wheel.setTheme('neon');
+        assertEqual('Teeman vaihto päivittää värit', wheel.colors[0], '#FF073A');
+        wheel.setTheme('default');
+
+        section('FortuneWheel - Luminanssi');
+        const lumWhite = wheel.getLuminance('#FFFFFF');
+        assert('Valkoisen luminanssi > 0.9', lumWhite > 0.9);
+        const lumBlack = wheel.getLuminance('#000000');
+        assertEqual('Mustan luminanssi on 0', lumBlack, 0);
+        const lumYellow = wheel.getLuminance('#FFEAA7');
+        assert('Keltaisen luminanssi > 0.5', lumYellow > 0.5);
+
+        // ===== Storage testit =====
+
+        section('Storage - Tallennus ja lataus');
+        localStorage.clear();
+
+        Storage.save(['Eka', 'Toka', 'Kolmas']);
+        const loaded = Storage.load();
+        assert('Tallennus ja lataus toimii', Array.isArray(loaded));
+        assertEqual('Ladatun datan pituus', loaded.length, 3);
+        assertEqual('Ensimmäinen elementti', loaded[0], 'Eka');
+
+        section('Storage - Tyhjennys');
+        Storage.clear();
+        const afterClear = Storage.load();
+        assertEqual('Tyhjennyksen jälkeen null', afterClear, null);
+
+        section('Storage - Olemassaolon tarkistus');
+        assert('Ei dataa tyhjennyksen jälkeen', !Storage.exists());
+        Storage.save(['test']);
+        assert('Data löytyy tallennuksen jälkeen', Storage.exists());
+
+        section('Storage - Validointi');
+        localStorage.setItem('onnenpyora_data', JSON.stringify({ sectors: [123, null, 'ok'] }));
+        const validated = Storage.load();
+        assert('Validoitu data on array', Array.isArray(validated));
+        assertEqual('Numero muunnettu tyhjäksi', validated[0], '');
+        assertEqual('Null muunnettu tyhjäksi', validated[1], '');
+        assertEqual('Merkkijono säilyy', validated[2], 'ok');
+
+        localStorage.setItem('onnenpyora_data', 'not json');
+        const broken = Storage.load();
+        assertEqual('Rikkinäinen JSON palauttaa null', broken, null);
+
+        localStorage.setItem('onnenpyora_data', JSON.stringify({ no_sectors: true }));
+        const noSectors = Storage.load();
+        assertEqual('Puuttuva sectors-kenttä palauttaa null', noSectors, null);
+
+        section('Storage - Historia');
+        Storage.clearHistory();
+        Storage.addHistory('Voittaja 1');
+        Storage.addHistory('Voittaja 2');
+        const hist = Storage.loadHistory();
+        assertEqual('Historiassa 2 merkintää', hist.length, 2);
+        assertEqual('Uusin ensin', hist[0].text, 'Voittaja 2');
+
+        // Testaa historia MAX
+        for (let i = 0; i < 15; i++) {
+            Storage.addHistory(`Testi ${i}`);
+        }
+        const fullHist = Storage.loadHistory();
+        assertEqual('Historia rajoitettu 10:een', fullHist.length, 10);
+
+        Storage.clearHistory();
+        const emptyHist = Storage.loadHistory();
+        assertEqual('Tyhjennetty historia on tyhjä', emptyHist.length, 0);
+
+        section('Storage - Teema');
+        Storage.saveTheme('neon');
+        assertEqual('Teema tallennettu ja ladattu', Storage.loadTheme(), 'neon');
+        localStorage.removeItem(Storage.THEME_KEY);
+
+        // ===== Yhteenveto =====
+        localStorage.clear();
+        results.innerHTML += `\n<span class="summary">Yhteensä: <span class="pass">${passed} läpi</span>, <span class="${failed ? 'fail' : 'pass'}">${failed} hylätty</span></span>\n`;
+    </script>
+</body>
+</html>
