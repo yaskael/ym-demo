@@ -1,7 +1,7 @@
 /**
  * FortuneWheel - Onnenpyörän piirto ja animaatio
  */
-export class FortuneWheel {
+class FortuneWheel {
     constructor(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
