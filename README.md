@@ -6,7 +6,8 @@ Mukautettava onnenpyörä-sovellus, joka toimii täysin selaimessa ilman verkkoy
 
 - 🎡 Interaktiivinen onnenpyörä Canvas-elementillä
 - ✏️ Mukautettavat tekstit jokaiselle sektorille
-- 🔄 Animoitu pyöritys napinpainalluksella
+- 🔄 Animoitu pyöritys napista, pyörää klikkaamalla tai välilyönnillä
+- 🎯 Vain täytetyt vaihtoehdot ovat mukana arvonnassa
 - 💾 Asetusten tallennus selaimen localStorageen
 - 🌐 Toimii täysin offline-tilassa
 

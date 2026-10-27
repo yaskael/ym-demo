@@ -6,28 +6,29 @@ class FortuneWheel {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
 
-        // HiDPI / Retina -tuki
+        // HiDPI / Retina -tuki. Näyttökoko määritetään CSS:ssä, jotta
+        // pyörä skaalautuu kapeille näytöille.
         this.dpr = window.devicePixelRatio || 1;
-        const logicalWidth = 400;
-        const logicalHeight = 400;
-        canvas.width = logicalWidth * this.dpr;
-        canvas.height = logicalHeight * this.dpr;
-        canvas.style.width = logicalWidth + 'px';
-        canvas.style.height = logicalHeight + 'px';
+        this.size = 400;
+        canvas.width = this.size * this.dpr;
+        canvas.height = this.size * this.dpr;
         this.ctx.scale(this.dpr, this.dpr);
 
-        this.centerX = logicalWidth / 2;
-        this.centerY = logicalHeight / 2;
-        this.radius = Math.min(this.centerX, this.centerY) - 10;
+        this.centerX = this.size / 2;
+        this.centerY = this.size / 2;
+        this.rimWidth = 14;
+        this.radius = this.size / 2 - this.rimWidth - 4;
 
         this.MIN_SECTORS = 2;
         this.MAX_SECTORS = 12;
+
+        this.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, sans-serif";
 
         // Sektorien oletustekstit
         this.sectors = [];
         this.initSectors(8);
 
-        // Teemapaletit
+        // Teemapaletit (12 eri väriä, jotta vierekkäiset sektorit eivät koskaan ole samanvärisiä)
         this.themes = {
             default: [
                 '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
@@ -45,16 +46,13 @@ class FortuneWheel {
                 '#FF00A0', '#00BFFF', '#BFFF00', '#FF4500'
             ],
             ocean: [
-                '#0077B6', '#00B4D8', '#48CAE4', '#90E0EF',
-                '#023E8A', '#0096C7', '#ADE8F4', '#CAF0F8',
-                '#03045E', '#0077B6', '#48CAE4', '#90E0EF'
+                '#0077B6', '#90E0EF', '#023E8A', '#48CAE4',
+                '#03045E', '#ADE8F4', '#0096C7', '#CAF0F8',
+                '#1B4965', '#00B4D8', '#2A6F97', '#62B6CB'
             ]
         };
 
         this.colors = this.themes.default;
-
-        // Seuraa mitkä sektorit käyttäjä on täyttänyt
-        this.filledSectors = new Array(this.sectors.length).fill(false);
 
         // Animaation tila
         this.rotation = 0;
@@ -62,6 +60,7 @@ class FortuneWheel {
         this.onCompleteCallback = null;
         this.onTickCallback = null;
         this.lastSectorIndex = -1;
+        this.highlightIndex = -1;
 
         // Piirrä alkutila
         this.draw();
@@ -109,6 +108,7 @@ class FortuneWheel {
             this.filledSectors.length = count;
         }
 
+        this.highlightIndex = -1;
         this.draw();
         return count;
     }
@@ -122,6 +122,7 @@ class FortuneWheel {
         if (index >= 0 && index < this.sectors.length) {
             this.filledSectors[index] = !!text;
             this.sectors[index] = text || `Vaihtoehto ${index + 1}`;
+            this.highlightIndex = -1;
             this.draw();
         }
     }
@@ -137,6 +138,7 @@ class FortuneWheel {
                 this.sectors[i] = text || `Vaihtoehto ${i + 1}`;
             }
         });
+        this.highlightIndex = -1;
         this.draw();
     }
 
@@ -149,44 +151,98 @@ class FortuneWheel {
     }
 
     /**
+     * Palauttaa pyörässä näytettävien sektorien alkuperäiset indeksit.
+     * Kun vähintään kaksi sektoria on täytetty, tyhjät jätetään pois,
+     * jolloin tyhjä sektori ei voi koskaan voittaa.
+     * @returns {number[]}
+     */
+    getActiveIndices() {
+        const all = this.sectors.map((_, i) => i);
+        if (this.filledCount() < 2) return all;
+        return all.filter(i => this.filledSectors[i]);
+    }
+
+    /**
      * Piirtää pyörän
      */
     draw() {
         const ctx = this.ctx;
-        const numSectors = this.sectors.length;
-        const sectorAngle = (2 * Math.PI) / numSectors;
+        const active = this.getActiveIndices();
+        const isPreview = this.filledCount() < 2;
+        const sectorAngle = (2 * Math.PI) / active.length;
 
-        // Tyhjennä canvas
-        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        ctx.clearRect(0, 0, this.size, this.size);
 
-        // Piirrä jokainen sektori
-        this.sectors.forEach((text, i) => {
+        this.drawRim();
+
+        active.forEach((sectorIndex, i) => {
             const startAngle = i * sectorAngle + this.rotation - Math.PI / 2;
             const endAngle = startAngle + sectorAngle;
+            const color = this.colors[i % this.colors.length];
+            const dimmed = isPreview && !this.filledSectors[sectorIndex];
+            const faded = this.highlightIndex !== -1 && this.highlightIndex !== i;
 
-            // Piirrä sektorin kaari
             ctx.beginPath();
             ctx.moveTo(this.centerX, this.centerY);
             ctx.arc(this.centerX, this.centerY, this.radius, startAngle, endAngle);
             ctx.closePath();
 
-            // Täytä väri (himmennä tyhjät sektorit)
-            ctx.fillStyle = this.colors[i % this.colors.length];
-            ctx.globalAlpha = this.filledSectors[i] ? 1.0 : 0.35;
+            ctx.fillStyle = color;
+            ctx.globalAlpha = dimmed ? 0.35 : faded ? 0.45 : 1.0;
             ctx.fill();
             ctx.globalAlpha = 1.0;
 
-            // Reunaviiva
-            ctx.strokeStyle = '#fff';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // Piirrä teksti
-            this.drawSectorText(text, startAngle, sectorAngle, i);
+            this.drawSectorText(this.sectors[sectorIndex], startAngle, sectorAngle, color, dimmed || faded);
         });
 
-        // Piirrä keskipiste
+        // Kevyt sisävarjo antaa pyörälle syvyyttä
+        const shade = ctx.createRadialGradient(
+            this.centerX, this.centerY, this.radius * 0.6,
+            this.centerX, this.centerY, this.radius
+        );
+        shade.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        shade.addColorStop(1, 'rgba(0, 0, 0, 0.18)');
+        ctx.beginPath();
+        ctx.arc(this.centerX, this.centerY, this.radius, 0, 2 * Math.PI);
+        ctx.fillStyle = shade;
+        ctx.fill();
+
         this.drawCenter();
+    }
+
+    /**
+     * Piirtää pyörän ulkokehän ja koristevalot
+     */
+    drawRim() {
+        const ctx = this.ctx;
+        const outer = this.radius + this.rimWidth;
+
+        const rim = ctx.createLinearGradient(0, 0, this.size, this.size);
+        rim.addColorStop(0, '#3d3d5c');
+        rim.addColorStop(1, '#22223a');
+        ctx.beginPath();
+        ctx.arc(this.centerX, this.centerY, outer, 0, 2 * Math.PI);
+        ctx.fillStyle = rim;
+        ctx.fill();
+
+        // Valot pyörivät pyörän mukana, joten pyörimisen näkee myös kehästä
+        const bulbs = 24;
+        const bulbRadius = this.radius + this.rimWidth / 2;
+        for (let i = 0; i < bulbs; i++) {
+            const a = (i / bulbs) * 2 * Math.PI + this.rotation;
+            ctx.beginPath();
+            ctx.arc(
+                this.centerX + Math.cos(a) * bulbRadius,
+                this.centerY + Math.sin(a) * bulbRadius,
+                2.6, 0, 2 * Math.PI
+            );
+            ctx.fillStyle = i % 2 === 0 ? '#ffd700' : '#fff6cc';
+            ctx.fill();
+        }
     }
 
     /**
@@ -202,36 +258,56 @@ class FortuneWheel {
     }
 
     /**
-     * Piirtää sektorin tekstin
+     * Lyhentää tekstin niin, että se mahtuu annettuun leveyteen
      */
-    drawSectorText(text, startAngle, sectorAngle, colorIndex) {
+    fitText(text, maxWidth) {
+        const ctx = this.ctx;
+        if (ctx.measureText(text).width <= maxWidth) return text;
+        let end = text.length;
+        while (end > 1 && ctx.measureText(text.substring(0, end) + '…').width > maxWidth) {
+            end--;
+        }
+        return text.substring(0, end).trimEnd() + '…';
+    }
+
+    /**
+     * Piirtää sektorin tekstin säteen suuntaisesti, tasattuna kehää vasten
+     */
+    drawSectorText(text, startAngle, sectorAngle, bgColor, muted) {
         const ctx = this.ctx;
         const textAngle = startAngle + sectorAngle / 2;
-        const textRadius = this.radius * 0.65;
+        const outerPadding = 14;
+        const innerLimit = 38; // keskiön ulkopuolelle
+        const maxWidth = this.radius - outerPadding - innerLimit;
 
         ctx.save();
         ctx.translate(this.centerX, this.centerY);
         ctx.rotate(textAngle);
 
-        // Valitse tekstin väri taustan luminanssin mukaan
-        const bgColor = this.colors[colorIndex % this.colors.length];
-        const textColor = this.getLuminance(bgColor) > 0.55 ? '#2d3436' : '#ffffff';
-
-        // Skaalaa fonttikoko sektorien lukumäärän mukaan
-        const fontSize = this.sectors.length <= 6 ? 14 : this.sectors.length <= 9 ? 12 : 10;
-
-        ctx.fillStyle = textColor;
-        ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        // Lyhennä pitkät tekstit
-        let displayText = text;
-        if (text.length > 12) {
-            displayText = text.substring(0, 11) + '…';
+        // Fonttikoko sektorin kaaren korkeuden mukaan (tekstin kohdalla).
+        // Pitkää tekstiä pienennetään ensin ja lyhennetään vasta sitten.
+        const arcHeight = 2 * Math.sin(Math.min(sectorAngle, Math.PI) / 2) * (this.radius * 0.7);
+        const minFontSize = 11;
+        let fontSize = Math.max(minFontSize, Math.min(18, Math.floor(arcHeight * 0.42)));
+        ctx.font = `600 ${fontSize}px ${this.fontFamily}`;
+        while (fontSize > 13 && ctx.measureText(text).width > maxWidth) {
+            fontSize--;
+            ctx.font = `600 ${fontSize}px ${this.fontFamily}`;
         }
 
-        ctx.fillText(displayText, textRadius, 0);
+        // Himmennetty sektori näkyy tummaa taustaa vasten, joten silloin teksti on aina vaalea
+        const darkText = !muted && this.getLuminance(bgColor) > 0.55;
+        ctx.fillStyle = darkText ? '#2d3436' : '#ffffff';
+        ctx.globalAlpha = muted ? 0.75 : 1.0;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+
+        if (!darkText) {
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+            ctx.shadowBlur = 3;
+        }
+
+        ctx.fillText(this.fitText(text, maxWidth), this.radius - outerPadding, 0);
         ctx.restore();
     }
 
@@ -241,22 +317,30 @@ class FortuneWheel {
     drawCenter() {
         const ctx = this.ctx;
 
-        // Ulompi ympyrä
         ctx.beginPath();
-        ctx.arc(this.centerX, this.centerY, 25, 0, 2 * Math.PI);
+        ctx.arc(this.centerX, this.centerY, 28, 0, 2 * Math.PI);
         ctx.fillStyle = '#2d3436';
         ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.stroke();
 
-        // Sisempi ympyrä
+        const gold = ctx.createRadialGradient(
+            this.centerX - 6, this.centerY - 6, 2,
+            this.centerX, this.centerY, 19
+        );
+        gold.addColorStop(0, '#fff3b0');
+        gold.addColorStop(1, '#e6b800');
         ctx.beginPath();
-        ctx.arc(this.centerX, this.centerY, 18, 0, 2 * Math.PI);
-        ctx.fillStyle = '#ffd700';
+        ctx.arc(this.centerX, this.centerY, 19, 0, 2 * Math.PI);
+        ctx.fillStyle = gold;
         ctx.fill();
     }
 
     /**
      * Käynnistää pyöritysanimaation
      * @param {function} onComplete - Callback kun pyöritys päättyy
+     * @param {function} [onTick] - Callback kun osoitin ylittää sektorirajan
      */
     spin(onComplete, onTick) {
         if (this.isSpinning) return;
@@ -264,14 +348,17 @@ class FortuneWheel {
         this.isSpinning = true;
         this.onCompleteCallback = onComplete;
         this.onTickCallback = onTick || null;
-        this.lastSectorIndex = -1;
+        this.lastSectorIndex = this.getCurrentSectorAtPointer();
+        this.highlightIndex = -1;
 
-        // Satunnainen pyörimismäärä: 5-10 kierrosta + satunnainen kulma
-        const extraSpins = 5 + Math.random() * 5;
+        // Satunnainen pyörimismäärä: 5-8 kierrosta + satunnainen kulma
+        const extraSpins = 5 + Math.floor(Math.random() * 4);
         const randomAngle = Math.random() * 2 * Math.PI;
         const totalRotation = extraSpins * 2 * Math.PI + randomAngle;
 
-        const duration = 4000; // 4 sekuntia
+        const reduceMotion = window.matchMedia &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const duration = reduceMotion ? 1200 : 4500;
         const startTime = performance.now();
         const startRotation = this.rotation;
 
@@ -279,13 +366,12 @@ class FortuneWheel {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
 
-            // Ease-out cubic hidastus
-            const easeOut = 1 - Math.pow(1 - progress, 3);
+            // Ease-out quart: pitkä, luonnollinen hidastuminen
+            const easeOut = 1 - Math.pow(1 - progress, 4);
 
             this.rotation = startRotation + totalRotation * easeOut;
             this.draw();
 
-            // Tarkista sektorivaihto tick-ääntä varten
             if (this.onTickCallback) {
                 const currentSector = this.getCurrentSectorAtPointer();
                 if (currentSector !== this.lastSectorIndex) {
@@ -298,7 +384,6 @@ class FortuneWheel {
                 requestAnimationFrame(animate);
             } else {
                 this.isSpinning = false;
-                // Normalisoi kulma välille [0, 2π]
                 this.rotation = this.rotation % (2 * Math.PI);
                 this.onSpinComplete();
             }
@@ -308,13 +393,14 @@ class FortuneWheel {
     }
 
     /**
-     * Palauttaa osoittimen kohdalla olevan sektorin indeksin
+     * Palauttaa osoittimen kohdalla olevan sektorin sijainnin pyörässä
+     * (indeksi näytettävien sektorien joukossa)
      */
     getCurrentSectorAtPointer() {
-        const numSectors = this.sectors.length;
+        const numSectors = this.getActiveIndices().length;
         const sectorAngle = (2 * Math.PI) / numSectors;
-        let normalizedRotation = (2 * Math.PI - (this.rotation % (2 * Math.PI))) % (2 * Math.PI);
-        return Math.floor(normalizedRotation / sectorAngle);
+        const normalizedRotation = (2 * Math.PI - (this.rotation % (2 * Math.PI))) % (2 * Math.PI);
+        return Math.min(numSectors - 1, Math.floor(normalizedRotation / sectorAngle));
     }
 
     /**
@@ -322,6 +408,8 @@ class FortuneWheel {
      */
     onSpinComplete() {
         const winner = this.getWinner();
+        this.highlightIndex = this.getCurrentSectorAtPointer();
+        this.draw();
         if (this.onCompleteCallback) {
             this.onCompleteCallback(winner);
         }
@@ -332,15 +420,8 @@ class FortuneWheel {
      * @returns {object} Voittajan tiedot {index, text}
      */
     getWinner() {
-        const numSectors = this.sectors.length;
-        const sectorAngle = (2 * Math.PI) / numSectors;
-
-        // Osoitin on yläreunassa (0°), joten lasketaan mikä sektori on siellä
-        // Rotation on negatiivinen suunta (myötäpäivään), joten käännetään
-        let normalizedRotation = (2 * Math.PI - (this.rotation % (2 * Math.PI))) % (2 * Math.PI);
-
-        // Lasketaan sektori-indeksi
-        const winnerIndex = Math.floor(normalizedRotation / sectorAngle);
+        // Osoitin on yläreunassa; rotation kasvaa myötäpäivään
+        const winnerIndex = this.getActiveIndices()[this.getCurrentSectorAtPointer()];
 
         return {
             index: winnerIndex,

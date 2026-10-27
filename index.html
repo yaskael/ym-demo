@@ -14,7 +14,7 @@
         <div class="wheel-section">
             <div class="wheel-container">
                 <div class="pointer"></div>
-                <canvas id="wheel" width="400" height="400" role="img" aria-label="Onnenpyörä - pyöritä painamalla pyöritä-nappia"></canvas>
+                <canvas id="wheel" width="400" height="400" role="img" aria-label="Onnenpyörä - pyöritä klikkaamalla pyörää tai pyöritä-nappia"></canvas>
             </div>
 
             <div class="action-buttons">
@@ -24,7 +24,7 @@
 
             <div id="result" class="result" role="status" aria-live="polite" aria-atomic="true"></div>
 
-            <div class="history-section" id="history-section" style="display: none;">
+            <div class="history-section" id="history-section" hidden>
                 <div class="history-header">
                     <h3>Historia</h3>
                     <button id="clear-history" class="clear-history-btn" aria-label="Tyhjennä historia">Tyhjennä</button>
@@ -48,11 +48,11 @@
                 <div class="theme-selector">
                     <label for="theme-select">Teema:</label>
                     <select id="theme-select">
-                    <option value="default">Klassinen</option>
-                    <option value="pastel">Pastelli</option>
-                    <option value="neon">Neon</option>
-                    <option value="ocean">Meri</option>
-                </select>
+                        <option value="default">Klassinen</option>
+                        <option value="pastel">Pastelli</option>
+                        <option value="neon">Neon</option>
+                        <option value="ocean">Meri</option>
+                    </select>
                 </div>
                 <label class="sound-toggle">
                     <input type="checkbox" id="sound-toggle" checked>

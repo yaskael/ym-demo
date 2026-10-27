@@ -18,42 +18,52 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeSelect = document.getElementById('theme-select');
     const soundToggle = document.getElementById('sound-toggle');
     const confettiContainer = document.getElementById('confetti-container');
+    const pointer = document.querySelector('.pointer');
 
     let inputs = [];
     let sectorCount = 8;
 
     // Web Audio API tick-ääntä varten
     let audioCtx = null;
-    function playTick() {
-        if (!soundToggle.checked) return;
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+    function getAudioContext() {
+        if (!soundToggle.checked) return null;
+        const AudioCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtor) return null;
+        if (!audioCtx) audioCtx = new AudioCtor();
+        // Selaimet voivat käynnistää kontekstin keskeytettynä
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        return audioCtx;
+    }
+
+    function playTone(ctx, freq, start, length, volume) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.frequency.value = 800;
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq;
         osc.type = 'sine';
-        gain.gain.value = 0.08;
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
-        osc.start(audioCtx.currentTime);
-        osc.stop(audioCtx.currentTime + 0.05);
+        gain.gain.setValueAtTime(volume, start);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + length);
+        osc.start(start);
+        osc.stop(start + length);
+    }
+
+    function playTick() {
+        pointer.classList.remove('tick');
+        // Pakota reflow, jotta animaatio käynnistyy uudelleen
+        void pointer.offsetWidth;
+        pointer.classList.add('tick');
+
+        const ctx = getAudioContext();
+        if (ctx) playTone(ctx, 800, ctx.currentTime, 0.05, 0.08);
     }
 
     function playWinSound() {
-        if (!soundToggle.checked) return;
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const ctx = getAudioContext();
+        if (!ctx) return;
         const notes = [523, 659, 784]; // C5, E5, G5
         notes.forEach((freq, i) => {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.frequency.value = freq;
-            osc.type = 'sine';
-            gain.gain.value = 0.12;
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15 * (i + 1) + 0.3);
-            osc.start(audioCtx.currentTime + 0.15 * i);
-            osc.stop(audioCtx.currentTime + 0.15 * (i + 1) + 0.3);
+            playTone(ctx, freq, ctx.currentTime + 0.15 * i, 0.45, 0.12);
         });
     }
 
@@ -114,9 +124,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 shareBtn.classList.remove('copied');
             }, 2000);
         }).catch(() => {
-            // Varasuunnitelma jos clipboard ei ole käytettävissä
-            shareBtn.textContent = 'Kopioi URL';
-            window.location.hash = hash;
+            // Varasuunnitelma jos clipboard ei ole käytettävissä:
+            // linkki asetetaan osoiteriville kopioitavaksi
+            history.replaceState(null, '', hash);
+            shareBtn.textContent = 'Kopioi osoiteriviltä';
+            setTimeout(() => { shareBtn.textContent = 'Jaa linkki'; }, 3000);
         });
     });
 
@@ -147,19 +159,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // Pyöritysnapin tapahtumankäsittelijä
     spinBtn.addEventListener('click', triggerSpin);
 
-    // Näppäimistötuki: välilyönti tai Enter pyörittää mistä tahansa sivulla
+    // Pyörää voi pyörittää myös klikkaamalla sitä
+    canvas.addEventListener('click', triggerSpin);
+
+    // Näppäimistötuki: välilyönti tai Enter pyörittää, kun fokus ei ole
+    // jollain muulla säätimellä (napit, kentät ja valikot toimivat normaalisti)
     document.addEventListener('keydown', (e) => {
-        if (e.target.tagName === 'INPUT') return;
-        if (e.code === 'Space' || e.code === 'Enter') {
-            e.preventDefault();
-            triggerSpin();
-        }
+        if (e.code !== 'Space' && e.code !== 'Enter') return;
+        if (e.target !== document.body && e.target !== canvas) return;
+        e.preventDefault();
+        triggerSpin();
     });
 
     function triggerSpin() {
         if (wheel.spinning() || spinBtn.disabled) return;
 
         hideResult();
+        setControlsLocked(true);
 
         spinBtn.disabled = true;
         spinBtn.setAttribute('aria-disabled', 'true');
@@ -169,9 +185,25 @@ document.addEventListener('DOMContentLoaded', () => {
             playWinSound();
             showConfetti();
             showResult(winner.text);
+            setControlsLocked(false);
             updateSpinButton();
             spinBtn.setAttribute('aria-disabled', 'false');
         }, playTick);
+    }
+
+    /**
+     * Estää vaihtoehtojen muokkauksen pyörityksen ajaksi, jotta tulos
+     * ei muutu kesken pyörimisen
+     */
+    function setControlsLocked(locked) {
+        inputs.forEach(input => { input.readOnly = locked; });
+        canvas.classList.toggle('spinning', locked);
+        if (locked) {
+            addBtn.disabled = true;
+            removeBtn.disabled = true;
+        } else {
+            updateSectorButtons();
+        }
     }
 
     /**
@@ -275,6 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showResult(text) {
         resultDiv.textContent = `🎉 ${text} 🎉`;
+        resultDiv.title = text;
         resultDiv.classList.add('show');
         Storage.addHistory(text);
         renderHistory();
@@ -302,11 +335,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderHistory() {
         const history = Storage.loadHistory();
-        if (history.length === 0) {
-            historySection.style.display = 'none';
-            return;
-        }
-        historySection.style.display = 'block';
+        historySection.hidden = history.length === 0;
+        if (history.length === 0) return;
         historyList.innerHTML = '';
         history.forEach((item) => {
             const li = document.createElement('li');

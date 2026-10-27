@@ -5,12 +5,18 @@
     padding: 0;
 }
 
+/* Tausta html-elementissä, jotta liukuväri kattaa koko sivun myös vieritettäessä */
+html {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) #16213e;
+    min-height: 100%;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    background: transparent;
     min-height: 100vh;
     color: #fff;
-    padding: 20px;
+    padding: 20px 16px;
 }
 
 /* Pääcontainer */
@@ -36,7 +42,7 @@ h2 {
 @media (min-width: 768px) {
     .container {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: 40px;
         align-items: start;
     }
@@ -57,29 +63,45 @@ h2 {
 /* Pyörän container ja osoitin */
 .wheel-container {
     position: relative;
-    width: 400px;
-    max-width: 100%;
+    width: min(400px, 100%);
+    aspect-ratio: 1;
 }
 
 #wheel {
     width: 100%;
-    height: auto;
+    height: 100%;
     display: block;
+    cursor: pointer;
     filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.4));
+}
+
+#wheel.spinning {
+    cursor: progress;
 }
 
 .pointer {
     position: absolute;
-    top: -15px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: -12px;
+    left: calc(50% - 18px);
     width: 0;
     height: 0;
-    border-left: 20px solid transparent;
-    border-right: 20px solid transparent;
-    border-top: 35px solid #ffd700;
-    filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.3));
+    border-left: 18px solid transparent;
+    border-right: 18px solid transparent;
+    border-top: 36px solid #ffd700;
+    filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.45));
+    transform-origin: 50% 0;
     z-index: 10;
+}
+
+/* Osoitin nytkähtää aina kun se ylittää sektorirajan */
+.pointer.tick {
+    animation: pointer-tick 0.12s ease-out;
+}
+
+@keyframes pointer-tick {
+    0% { transform: rotate(0deg); }
+    40% { transform: rotate(-14deg); }
+    100% { transform: rotate(0deg); }
 }
 
 /* Pyöritysnappi */
@@ -92,16 +114,17 @@ h2 {
     font-weight: bold;
     border-radius: 50px;
     cursor: pointer;
+    white-space: nowrap;
     transition: all 0.3s ease;
     box-shadow: 0 5px 20px rgba(0, 206, 201, 0.4);
 }
 
-.spin-button:hover {
+.spin-button:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(0, 206, 201, 0.5);
 }
 
-.spin-button:active {
+.spin-button:active:not(:disabled) {
     transform: translateY(0);
 }
 
@@ -118,14 +141,19 @@ h2 {
     outline-offset: 3px;
 }
 
-.input-group input:focus-visible {
+.input-group input:focus-visible,
+.theme-selector select:focus-visible,
+.sound-toggle input[type="checkbox"]:focus-visible,
+.clear-history-btn:focus-visible {
     outline: 2px solid #ffd700;
-    outline-offset: 1px;
+    outline-offset: 2px;
 }
 
 /* Toimintopainikkeet */
 .action-buttons {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 12px;
     align-items: center;
 }
@@ -160,8 +188,10 @@ h2 {
 
 /* Tulosnäyttö */
 .result {
+    max-width: min(400px, 100%);
     min-height: 60px;
     padding: 15px 30px;
+    overflow-wrap: anywhere;
     font-size: 1.4rem;
     font-weight: bold;
     text-align: center;
@@ -169,6 +199,10 @@ h2 {
     opacity: 0;
     transform: scale(0.8);
     transition: all 0.3s ease;
+}
+
+.result:empty {
+    display: none;
 }
 
 .result.show {
@@ -263,6 +297,7 @@ h2 {
 
 .input-group input {
     flex: 1;
+    min-width: 0;
     padding: 12px 15px;
     font-size: 1rem;
     border: 2px solid rgba(255, 255, 255, 0.1);
@@ -276,6 +311,11 @@ h2 {
     outline: none;
     border-color: #00cec9;
     background: rgba(255, 255, 255, 0.1);
+}
+
+.input-group input:read-only {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .input-group input::placeholder {
@@ -297,6 +337,7 @@ h2 {
 
 .theme-selector select {
     flex: 1;
+    min-width: 0;
     padding: 8px 12px;
     border-radius: 8px;
     border: 2px solid rgba(255, 255, 255, 0.1);
@@ -319,7 +360,7 @@ h2 {
 
 /* Historia */
 .history-section {
-    width: 100%;
+    width: min(400px, 100%);
     margin-top: 10px;
 }
 
@@ -369,6 +410,7 @@ h2 {
 /* Äänitoggle */
 .controls-footer {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 15px;
     margin-top: 18px;
@@ -428,24 +470,37 @@ h2 {
 @media (max-width: 767px) {
     h1 {
         font-size: 1.8rem;
-    }
-
-    .wheel-container {
-        width: 300px;
+        margin-bottom: 24px;
     }
 
     .controls {
-        margin-top: 30px;
+        margin-top: 28px;
+        padding: 20px 16px;
     }
 
     .spin-button {
         padding: 12px 40px;
         font-size: 1.1rem;
     }
+
+    .result {
+        font-size: 1.15rem;
+        padding: 15px 20px;
+    }
 }
 
-@media (max-width: 350px) {
-    .wheel-container {
-        width: 250px;
+@media (prefers-reduced-motion: reduce) {
+    .confetti-container {
+        display: none;
+    }
+
+    .pointer.tick {
+        animation: none;
+    }
+
+    .spin-button,
+    .share-button,
+    .result {
+        transition: none;
     }
 }
